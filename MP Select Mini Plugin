@@ -1,0 +1,631 @@
+/**
+ *  Monoprice Select Mini 3D Printer TPI Plugin
+ *
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ */
+var express = require('express');
+var net = require('net');
+var app = express();
+var nconf = require('nconf');
+nconf.file({ file: './config.json' });
+var notify;
+var logger = function(str) {
+  mod = 'MP';
+  console.log("[%s] [%s] %s", new Date().toISOString(), mod, str);
+}
+
+/**
+ * Routes
+ */
+app.get('/', function (req, res) {
+  res.status(200).json({ status: 'Monoprice Select Mini 3D Printer TPI plugin running' });
+});
+
+app.get('/home', function (req, res) {
+  // Device.write("G28"+'\n');
+if (nconf.get('MPSelectmini:address')) { 
+    //Device.write("G28"+'\n');
+    MP.command("G28"+'\n');
+    logger("here trying to send /home");
+  }
+  res.end();
+});
+
+app.get('/fanOn', function (req, res) {
+  //logger("Youre getting this far");
+   //device.write("G106 S200"+'\n');
+  MP.command("M106 S200"+'\n');
+  res.end();
+  //logger("fan is on");
+});
+
+app.get('/fanOff', function (req, res) {
+    MP.command('M107'+'\n');
+  res.end();
+});
+
+app.get('/custom/:Custom', function (req, res) {
+    var Custom = req.params.Custom.split(',');
+    logger(Custom[1]);
+     if (Custom[1] == undefined) {
+        MP.command(Custom[0]+'\n');
+        return;
+      } else if (Custom[2] == undefined) {
+         MP.command(Custom[0]+" "+Custom[1]+'\n');
+         return;
+       } else if (Custom[3] == undefined) {
+           MP.command(Custom[0]+" "+Custom[1]+" "+Custom[2]+'\n');
+           return;
+         } else if (Custom[4] == undefined) {
+             MP.command(Custom[0]+" "+Custom[1]+" "+Custom[2]+" "+Custom[3]+'\n');
+             return;
+           } else if (Custom[5] == undefined) {
+               MP.command(Custom[0]+" "+Custom[1]+" "+Custom[2]+" "+Custom[3]+" "+Custom[4]+'\n');
+               return;
+               }
+    
+
+    //MP.command(Custom[0]+" "+Custom[1]+" "+Custom[2]+" "+Custom[3]+" "+Custom[4]+'\n');
+  res.end();
+});
+
+app.get('/position/:xyz', function (req, res) {
+      var xyz = req.params.xyz.split(','); 
+    logger(xyz);
+  //  if (!xyz) {
+       if (xyz[0] <= 123) {
+        //logger("true1: "+xyz[0]);
+        if (xyz[1] <= 123) {
+         //logger("true2: "+xyz[1]);
+         if (xyz[2] <= 123) {
+          //logger("true3: "+xyz[2]);
+      MP.command("G0 X"+xyz[0]+" Y"+xyz[1]+" Z"+xyz[2]);
+          }
+         }
+        }
+ //      }
+  res.end();
+});
+
+
+///////////////////////////////////////////////////////////
+//app.get('/bypass/:zones', function (req, res) {
+//  if (nconf.get('envisalink:securityCode')) {
+//    var zones = req.params.zones.split(',').map(function(x) {
+//      x = ('00'+x.trim()).slice(-2);
+//      return (x === '00') ? '' : x;
+//    }).join('');
+//
+//    if (zones) {
+//      evl.command(nconf.get('envisalink:securityCode')+'6'+zones);
+//    }
+//  }
+//  res.end();
+//});
+/////////////////////////////////////////////////////////////////
+
+app.get('/config/:host', function (req, res) {
+  var parts = req.params.host.split(":");
+  nconf.set('MPSelectmini:address', parts[0]);
+  nconf.set('MPSelectmini:port', parts[1]);
+logger("got address and port for select mini")
+
+  nconf.save(function (err) {
+    if (err) {
+      logger('Configuration error: '+err.message);
+      res.status(500).json({ error: 'Configuration error: '+err.message });
+      return;
+    }
+  });
+  res.end();
+});
+
+app.get('/discover', function (req, res) {
+  MP.discover();
+  res.end();
+});
+
+app.get('/command/:cmd', function (req, res) { 
+    //BE CAREFUL 
+    //evl.command(req.params.cmd); 
+    res.end(); 
+}); 
+
+
+module.exports = function(f) {
+  notify = f;
+  return app;
+};
+
+/**
+ * MP Select Mini
+ */
+var MP = new MPSelectmini();
+MP.init();
+
+function MPSelectmini () {
+  var self = this;
+  var locked = false;
+  var panel = {alpha: '', timer: [], partition: 1, zones: []};
+  var device = null;
+  var deviceRequest = null;
+  var deviceResponse = null;
+  var responseHandler = function() {};
+  var requestHandler = function(a, b, c) {
+    deviceRequest = a;
+    deviceResponse = b;
+    responseHandler = c;
+    write(deviceRequest);
+    logger(deviceRequest);
+  };
+
+  /**
+   * init address and port info from config json file
+   */
+  this.init = function() {
+    if (!nconf.get('MPSelectmini:address') || !nconf.get('MPSelectmini:port')) {
+        logger('** NOTICE ** MP Select Mini settings not set in config file!');
+        return;
+    }
+
+    if (device && device.writable) { 
+   //     logger("works");
+ // device.write("G28"+'\n');  // this worked
+   //   write("G28"+'\n');
+ //     app.get('/home', function (req, res) {
+ //  res.write("G28"+'\n');
+ //  res.end(); 
+ //   });
+ //   logger("works/here trying to send G28");
+        return; }
+    if (device) { device.destroy(); }
+
+    device = new net.Socket();
+    device.on('error', function(err) {
+      logger("MP Select Mini connection error: "+err.description);
+      device.destroy();
+      setTimeout(function() { self.init() }, 4000);
+    });
+
+    device.on('close', function() {
+      logger('MP Select Mini connection closed.');
+      device.destroy();
+      setTimeout(function() { self.init() }, 4000);
+    });
+
+    device.on('data', function (data) {
+      data.toString('utf8').split(/\r?\n/).forEach( function (item) {
+          read(item);
+ //    //logger("Device is on");
+      });
+    });
+
+    device.connect(nconf.get('MPSelectmini:port'), nconf.get('MPSelectmini:address'), function() {
+      logger('Connected to MP Select Mini at '+nconf.get('MPSelectmini:address')+':'+nconf.get('MPSelectmini:port'));
+    });
+  };
+
+  // check connection every 60 secs
+  setInterval(function() { self.init(); }, 60*1000);
+
+  // experimental: dump zone timers
+  var zoneTimer = (nconf.get('MPSelectmini:dumpZoneTimer')) ? parseInt(nconf.get('MPSelectmini:dumpZoneTimer')) : 0;
+  if (zoneTimer > 0) {
+    setInterval(function() { write('^02,$'); }, 60*1000*zoneTimer);
+  }
+
+  /**
+   * write
+   */
+  function write(cmd) {
+    if (!device || !device.writable) {
+      logger('MP Select Mini not connected.');
+      return;
+    }
+
+    if (!cmd || cmd.length == 0) { return; }
+   logger('TX > '+cmd);
+    device.write(cmd+'\n');
+  }
+
+  this.command = function(cmd) {
+    if (locked) { return; }
+    write(cmd);
+  };
+
+  /**
+   * read
+   */
+  function read(data) {
+    if (data.length == 0) { return; }
+    logger('RX < '+data);
+
+    var code = data;
+    if (data[0] == '%' || data[0] == '^') {
+      code = data.split(',')[0];
+      data = data.slice(data.indexOf(',')+1,-1);
+    }
+
+    // defined device response handler
+    if (responseHandler && deviceResponse) {
+      var match = data.indexOf(deviceResponse);
+      if (match != -1) {
+        responseHandler(data);
+      }
+    } else {
+      // generic handler
+      if (RESPONSE_TYPES[code]) {
+        responseHandler = RESPONSE_TYPES[code]['handler'];
+        responseHandler(data);
+      } else {
+ //      // logger("Error: ignoring invalid message code from MP Select Mini: "+code+", data: "+data);
+      }
+    }
+  }
+
+  /**
+   * discover
+   */
+  this.discover = function() {
+    if (nconf.get('MPSelectmini:panelConfig')) {
+      notify(JSON.stringify(nconf.get('MPSelectmini:panelConfig')));
+      logger('MP Select Completed panel discovery');
+    } else {
+      logger('** NOTICE ** Panel configuration not set in config file!');
+    }
+
+    //never do auto-discovery
+    return;
+  };
+
+  /**
+   * Generic Handlers
+   */
+  function login() {
+    //logger('Execute login');
+    write(nconf.get('MPSelectmini:password'));
+  }
+
+  function keypad_update(data) {
+    logger('Execute keypad_update: '+data);
+
+    var map = data.split(',');
+    if (map.length != 5 || data.indexOf('%') != -1) {
+      logger("Error: ignoring invalid data format from MP Select Mini: "+data)
+      return;
+    }
+
+    var msg = {};
+    msg.partitionNumber = parseInt(map[0]);
+    msg.flags = getLedFlag(map[1]);
+    msg.userOrZone = parseInt(map[2]);
+    msg.beep = VIRTUAL_KEYPAD_BEEP[map[3]];
+    msg.alpha = map[4].trim();
+    msg.dscCode = getDscCode(msg.flags);
+    logger("msg: "+JSON.stringify(msg));
+    logger("panel: "+JSON.stringify(panel));
+
+    //////////
+    // ZONE UPDATE
+    //////////
+
+    // all zones are closed
+    if (msg.dscCode == 'READY') {
+      panel.timer = [];
+      for (var n in panel.zones){
+        if (panel.zones[n] != 'closed') {
+          // notify
+          updateZone(msg.partitionNumber, n, 'closed');
+        }
+      }
+    }
+
+    // one or more zones are open
+    if (msg.dscCode == '' && !isNaN(msg.userOrZone)) {
+      if (panel.zones[msg.userOrZone] != 'open') {
+        // reset timer when new zone added
+        panel.timer[msg.userOrZone] = 0;
+        for (var n in panel.timer) {
+          panel.timer[n] = 0;
+        }
+
+        // notify
+        updateZone(msg.partitionNumber, msg.userOrZone, 'open');
+      } else {
+        panel.timer[msg.userOrZone]++;
+
+        // experimental: close all zones that have not updated after three ticks
+        if (panel.timer[msg.userOrZone] == 2) {
+          for (var n in panel.timer) {
+            if (panel.timer[n] == 0) {
+              // close orphaned zone
+              delete panel.timer[n];
+
+              // notify
+              updateZone(msg.partitionNumber, n, 'closed');
+            } else {
+              // reset timer
+              panel.timer[n] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    // zone in alarm
+    if (msg.dscCode == 'IN_ALARM' && !isNaN(msg.userOrZone)) {
+      if (panel.zones[msg.userOrZone] != 'alarm') {
+        // notify
+        updateZone(msg.partitionNumber, msg.userOrZone, 'alarm');
+      }
+    }
+
+    //////////
+    // PARTITION UPDATE
+    //////////
+    if (panel.alpha != msg.alpha) {
+      //notify
+      updatePartition(msg.partitionNumber, getPartitionState(msg.flags, msg.alpha), msg.alpha);
+    }
+  }
+
+  function login_success() {
+    logger('Execute login_success');
+  }
+
+  function login_failure() {
+    logger('Execute login_failure');
+  }
+
+  function login_timeout() {
+    logger('Execute login_timeout');
+  }
+
+  function zone_state_change(data) {
+    logger('Execute zone_state_change: '+data);
+  }
+
+  function partition_state_change(data) {
+    logger('Execute partition_state_change: '+data);
+  }
+
+  function realtime_cid_event(data) {
+    //logger('Execute realtime_cid_event: '+data);
+  }
+
+  function zone_timer_dump(data) {
+    logger('Execute zone_timer_dump: '+data);
+    var queue = [];
+
+    // Swap the couples of every four bytes (little endian to big endian)
+    for (var i=0; i<data.length; i+=4) {
+      var zoneTimer = data[i+2]+data[i+3]+data[i]+data[i+1];
+
+      var msg = {};
+      msg.zoneNumber = (i/4)+1;
+      msg.zoneTimer = (parseInt('FFFF', 16) - parseInt(zoneTimer, 16)) * 5;
+
+      // zone timer over 30 secs will be considered closed
+      msg.zoneStatus = (msg.zoneTimer < 30) ? 'open' : 'closed';
+
+      // use zone timer dump as backup to check for orphaned zones
+      if (msg.zoneStatus == 'closed' &&
+          panel.zones[msg.zoneNumber] != 'closed') {
+        // notify
+        queue.push({
+          partition: panel.partition,
+          zoneNumber: msg.zoneNumber,
+          state: 'closed'
+        });
+      }
+      //logger(JSON.stringify(msg));
+    }
+
+    updateThrottler(queue);
+  }
+
+  function poll_response(data) {
+    logger('Execute poll_response: '+data);
+  }
+
+  function command_response(data) {
+    logger('Execute command_response: '+data);
+  }
+
+  /**
+   * Helper Functions
+   */
+  function updateZone(partitionNumber, zoneNumber, state) {
+    panel.zones[zoneNumber] = state;
+
+    var msg = JSON.stringify({type: 'zone', partition: partitionNumber, zone: zoneNumber, state: state});
+    logger(msg);
+    notify(msg);
+  }
+
+  function updatePartition(partitionNumber, state, alpha) {
+    panel.alpha = alpha;
+
+    var msg = JSON.stringify({type: 'partition', partition: partitionNumber, state: state, alpha: alpha});
+    logger(msg);
+    notify(msg);
+  }
+
+  function updateThrottler(queue) {
+    var i = 0;
+    while (queue.length) {
+      var x = queue.pop();
+
+      // notify
+      updateZone(x.partition, x.zoneNumber, x.state);
+      i++; if (i == 50) { break; }
+    }
+
+    if (!queue.length) { return; }
+
+    setTimeout(function() { updateThrottler(queue) }, 5000);
+  }
+
+  function cleanBuffer(data) {
+    //trim from response: 13,10
+    data = (data[data.length-1]==10) ? data.slice(0,data.length-1) : data;
+    data = (data[data.length-1]==13) ? data.slice(0,data.length-1) : data;
+    return data.toString('utf8');
+  }
+
+  function lpad(val, len) {
+    if (len < val.length) return val;
+
+    var pad = "";
+    for (var i = 0; i < len-val.length; i++) { pad += "0"; }
+
+    return pad+val;
+  }
+
+  function getLedFlag(flag) {
+    var flags = {};
+    var flagInt = parseInt(flag, 16);
+    for (var key in LED_FLAGS) {
+      flags[key] = Boolean(LED_FLAGS[key] & flagInt);
+    }
+    return flags;
+  }
+
+  function getDscCode(flags) {
+    var dscCode = '';
+    if (flags.alarm || flags.alarm_fire_zone || flags.fire) { dscCode = 'IN_ALARM'; }
+    else if (flags.system_trouble) { dscCode = 'NOT_READY'; }
+    else if (flags.ready) { dscCode = 'READY'; }
+    else if (flags.bypass) { dscCode = 'READY_BYPASS'; }
+    else if (flags.armed_stay) { dscCode = 'ARMED_STAY'; }
+    else if (flags.armed_away) { dscCode = 'ARMED_AWAY'; }
+    else if (flags.armed_zero_entry_delay) { dscCode = 'ARMED_MAX'; }
+    else if (flags.not_used2 && flags.not_used3) { dscCode = 'NOT_READY'; } // added to handle 'Hit * for faults'
+    return dscCode;
+  }
+
+  function getPartitionState(flags, alpha) {
+    if (flags.alarm || flags.alarm_fire_zone || flags.fire) { return 'alarm'; }
+    else if (flags.alarm_in_memory) { return 'alarmcleared'; }
+    else if (alpha.indexOf('You may exit now') > 0) { return 'arming'; }
+    else if (flags.armed_stay && flags.armed_zero_entry_delay) { return 'armedinstant'; }
+    else if (flags.armed_away && flags.armed_zero_entry_delay) { return 'armedmax'; }
+    else if (flags.armed_stay) { return 'armedstay'; }
+    else if (flags.armed_away) { return 'armedaway'; }
+    else if (flags.ready) { return 'ready'; }
+    else if (!flags.ready) { return 'notready'; }
+    return 'unknown';
+  }
+
+  function toTitleCase(str)
+  {
+    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+  }
+
+   /**
+   * Constants
+   */
+  var RESPONSE_TYPES = {
+    'Login:': {
+      'name' : 'Login Prompt',
+      'description' : 'Sent During Session Login Only.',
+      'handler' : login },
+    'OK': {
+      'name' : 'Login Success',
+      'description' : 'Send During Session Login Only, successful login',
+      'handler' : login_success },
+    'FAILED' : {
+      'name' : 'Login Failure',
+      'description' : 'Sent During Session Login Only, password not accepted',
+      'handler' : login_failure },
+    'Timed Out!' : {
+      'name' : 'Login Interaction Timed Out',
+      'description' : 'Sent during Session Login Only, socket connection is then closed',
+      'handler' : login_timeout },
+    '%00' : {
+      'name' : 'Virtual Keypad Update',
+      'description' : 'The panel wants to update the state of the keypad',
+      'handler' : keypad_update },
+    '%01' : {
+      'name' : 'Zone State Change',
+      'description' : 'A zone change-of-state has occurred',
+      'handler' : zone_state_change,
+      'type' : 'zone'},
+    '%02' : {
+      'name' : 'Partition State Change',
+      'description' : 'A partition change-of-state has occured',
+      'handler' : partition_state_change,
+      'type' : 'partition' },
+    '%03' : {
+      'name' : 'Realtime CID Event',
+      'description' : 'A system event has happened that is signaled to either the Envisalerts servers or the central monitoring station',
+      'handler' : realtime_cid_event,
+      'type' : 'system' },
+    '%FF' : {
+      'name' : 'Envisalink Zone Timer Dump',
+      'description' : 'This command contains the raw zone timers used inside the Envisalink. The dump is a 256 character packed HEX string representing 64 UINT16 (little endian) zone timers. Zone timers count down from 0xFFFF (zone is open) to 0x0000 (zone is closed too long ago to remember). Each tick of the zone time is actually 5 seconds so a zone timer of 0xFFFE means 5 seconds ago. Remember, the zone timers are LITTLE ENDIAN so the above example would be transmitted as FEFF.',
+      'handler' : zone_timer_dump },
+    '^00' : {
+      'name': 'Poll',
+      'description' : 'Envisalink poll',
+      'handler' : poll_response,
+      'type' : 'envisalink' },
+    '^01' : {
+      'name': 'Change Default Partition',
+      'description': 'Change the partition which keystrokes are sent to when using the virtual keypad.',
+      'handler' : command_response,
+      'type' : 'envisalink' },
+    '^02' : {
+      'name': 'Dump Zone Timers',
+      'description' : 'This command contains the raw zone timers used inside the Envisalink. The dump is a 256 character packed HEX string representing 64 UINT16 (little endian) zone timers. Zone timers count down from 0xFFFF (zone is open) to 0x0000 (zone is closed too long ago to remember). Each tick of the zone time is actually 5 seconds so a zone timer of 0xFFFE means 5 seconds ago. Remember, the zone timers are LITTLE ENDIAN so the above example would be transmitted as FEFF.',
+      'handler' : command_response,
+      'type' : 'envisalink' },
+    '^03' : {
+      'name': 'Keypress to Specific Partition',
+      'description' : 'This will send a keystroke to the panel from an arbitrary partition. Use this if you dont want to change the TPI default partition.',
+      'handler' : command_response,
+      'type' : 'envisalink' },
+    '^0C' : {
+      'name': 'Response for Invalid Command',
+      'description' : 'This response is returned when an invalid command number is passed to Envisalink',
+      'handler': command_response,
+      'type' : 'envisalink' }
+  };
+
+  var VIRTUAL_KEYPAD_BEEP = {
+    '00' : 'off',
+    '01' : 'beep 1 time',
+    '02' : 'beep 2 times',
+    '03' : 'beep 3 times',
+    '04' : 'continous fast beep',
+    '05' : 'continuous slow beep'
+  };
+
+  var LED_FLAGS = {
+    "alarm" : 1,
+    "alarm_in_memory" : 2,
+    "armed_away" : 4,
+    "ac_present" : 8,
+    "bypass" : 16,
+    "chime" : 32,
+    "not_used1" : 64,
+    "armed_zero_entry_delay" : 128,
+    "alarm_fire_zone" : 256,
+    "system_trouble" : 512,
+    "not_used2" : 1024,
+    "not_used3" : 2048,
+    "ready" : 4096,
+    "fire" : 8192,
+    "low_battery" : 16384,
+    "armed_stay" : 32768
+  };
+}
