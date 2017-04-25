@@ -1,0 +1,110 @@
+/**
+ *  Monoprice Select Mini 3D Printer
+ *
+ *  Copyright 2017 Isaias Munguia
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ */
+metadata {
+	definition (name: "MP Select Mini", namespace: "Blue2swing", author: "Isaias") {
+		capability "Alarm"
+		capability "Button"
+        
+        command "partition"
+        command "Send1"
+        command "Send2"
+        command "Send3"
+        command "Send4"
+        command "Send5"
+        command "Send6"
+	}
+
+
+	//simulator {
+		// TODO: define status and reply messages here
+	//}
+
+	tiles (scale: 2) {
+    multiAttributeTile(name:"partition", type: "generic", width: 6, height: 4) {
+      tileAttribute ("device.dscpartition", key: "PRIMARY_CONTROL") {
+        attributeState "ready", label: 'Ready', icon:"st.Home.home2"
+        attributeState "notready", label: 'Not Ready', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+        attributeState "arming", label: 'Arming', backgroundColor: "#ffcc00", icon:"st.Home.home3"
+        attributeState "armedstay", label: 'Armed Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+        attributeState "armedaway", label: 'Armed Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+        attributeState "armedinstant", label: 'Armed Instant Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+        attributeState "armedmax", label: 'Armed Instant Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+        attributeState "alarmcleared", label: 'Alarm in Memory', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+        attributeState "alarm", label: 'Alarm', backgroundColor: "#ff0000", icon:"st.Home.home3"
+      }
+      tileAttribute ("panelStatus", key: "SECONDARY_CONTROL") {
+        attributeState "panelStatus", label:'${currentValue}'
+      }
+    }
+      
+     
+       standardTile("Keypad1","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Home', action: "Send1", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad2","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan On', action: "Send2", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad3","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan Off', action: "Send3", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad4","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Position', action: "Send4", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad5","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Test', action: "Send5", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad6","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Custom', action: "Send6", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+        
+    main "partition"
+
+    details(["partition",
+             "Keypad1", "Keypad2", "Keypad3", 
+             "Keypad4", "Keypad5", "Keypad6"])
+   }  
+   
+  preferences {
+    input name: "xyz", type: "text", title: "X,Y,Z position", description: "Comma delimited list for X,Y,Z position", required: false
+    input name: "Custom", type: "text", title: "Custom Command", description: "Custom Command", required: false
+  }
+
+}
+
+def partition(String state, String alpha) {
+  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}")
+  sendEvent (name: "panelStatus", value: "${alpha}", displayed: false)
+}
+
+
+def Send1() {
+  parent.sendCommandPlugin('/home');
+}
+def Send2() {
+  parent.sendCommandPlugin('/fanOn');
+}
+def Send3() {
+  parent.sendCommandPlugin('/fanOff');
+}
+def Send4() {
+  parent.sendCommandPlugin('/position/'+settings.xyz);
+}
+def Send5() {
+  parent.sendCommandPlugin('/');
+}
+def Send6() {
+  parent.sendCommandPlugin('/custom/'+settings.Custom);
+}
