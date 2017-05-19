@@ -1,6 +1,7 @@
 /**
- *  SmartThings SmartApp: Monoprice Select Mini
+ *  SmartThings SmartApp: Honeywell Security
  *
+ *  Author: redloro@gmail.com
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -14,7 +15,7 @@
 import groovy.json.JsonSlurper
 
 definition(
-  name: "MP Mini App",
+  name: "MP Select Mini app",
   namespace: "Blue2swing",
   author: "Isaias",
   description: "Monoprice Select Mini SmartApp",
@@ -39,28 +40,37 @@ def page1() {
       input "proxyPort", "text", title: "Proxy Port", description: "(ie. 8080)", required: true, defaultValue: "8080"
       input "authCode", "password", title: "Auth Code", description: "", required: true, defaultValue: "secret-key"
     }
-   section("3D Printer") {
-     input name: "pluginType", type: "enum", title: "Plugin Type", required: true, submitOnChange: true, options: ["MP Select Mini"]
-       input "securityCode", "password", title: "Security Code", description: "User code to arm/disarm the security panel", required: false
+    section("3D Printer") {
+      input name: "pluginType", type: "enum", title: "Plugin Type", required: true, submitOnChange: true, options: ["MPSelectmini"]
+      input name: "portType", type: "enum", title: "ip/serial", required: true, submitOnChange: true, options: ["ip", "Serial"]
+      //input "securityCode", "password", title: "Security Code", description: "User code to arm/disarm the security panel", required: false
       input "enableDiscovery", "bool", title: "Discover Zones (WARNING: all existing zones will be removed)", required: false, defaultValue: false
     }
 
-   if (pluginType == "MP Select Mini") {
+    if (pluginType == "MPSelectmini") {
       section("MP Select Mini TPI") {
-        input "MPaddress", "text", title: "Host Address", description: "(ie. 192.168.1.11)", required: false
-        input "MPport", "text", title: "Host Port", description: "(ie. 23)", required: false
-       input "MPPassword", "password", title: "Password", description: "", required: false
+        input "mpAddress", "text", title: "Host Address", description: "(ie. 192.168.1.11)", required: false
+        input "mpPort", "text", title: "Host Port", description: "(ie. 23)", required: false
+        //input "evlPassword", "password", title: "Password", description: "", required: false
       }
     }
-        section("Smart Home Monitor") {
-      input "enableSHM", "bool", title: "Integrate with Smart Home Monitor", required: true, defaultValue: true
+
+    if (portType == "Serial") {
+      section("MP Select Mini Serial") {
+        input "mpSerialport", "text", title: "Serial Port", description: "(ie. COM1)", required: false
+        input "mpBaudrate", "text", title: "Baudrate", description: "(ie. 115200)", required: false
+        //input "evlPassword", "password", title: "Password", description: "", required: false
+      }
     }
+
+  //  section("Smart Home Monitor") {
+  //    input "enableSHM", "bool", title: "Integrate with Smart Home Monitor", required: true, defaultValue: true
+  //  }
   }
 }
 
 def installed() {
   subscribeToEvents()
- // initialize()
 }
 
 def subscribeToEvents() {
@@ -73,48 +83,30 @@ def uninstalled() {
 }
 
 def updated() {
- if (settings.enableDiscovery) {
+  if (settings.enableDiscovery) {
     //remove child devices as we will reload
-   removeChildDevices()
+    removeChildDevices()
   }
- 
+
   //subscribe to callback/notifications from STNP
   sendCommand('/subscribe/'+getNotifyAddress())
 
   //save envisalink settings to STNP config
-  if (settings.pluginType == "MP Select Mini" && settings.MPaddress && settings.MPport && settings.MPPassword && settings.securityCode) {
-    sendCommandPlugin('/config/'+settings.MPaddress+":"+settings.MPport+":"+settings.MPPassword+":"+settings.securityCode)
+  if (settings.pluginType == "MPSelectmini" && settings.mpAddress && settings.mpPort) { //&& settings.evlPassword && settings.securityCode) {
+    sendCommandPlugin('/config/'+settings.mpAddress+":"+settings.mpPort+":TestPsswd:TestSecurCode") //+":"+settings.evlPassword+":"+settings.securityCode)
   }
 
-//  log.debug "Updated with settings: ${settings}"
- 
- if (settings.enableDiscovery) {
+  //save ad2usb settings to STNP config
+  if (settings.portType == "Serial" && settings.mpSerialport && settings.mpBaudrate) {
+    sendCommandPlugin('/config/'+settings.mpSerialport+":"+settings.mpBaudrate)
+  }
+
+  if (settings.enableDiscovery) {
     //delay discovery for 5 seconds
     runIn(5, discoverChildDevices)
-   settings.enableDiscovery = false
+    settings.enableDiscovery = false
   }
-  
-//   log.debug "Updated with settings: ${settings}"
-// unsubscribe()
-// initialize()
- 
 }
-
-//def uninstalled() {
-//  removeChildDevices()
-//}
-
-//def initialize() {
-//        def dni = 'MP 3D Printer'
-//        if (!getChildDevice(dni)) {
-//        addChildDevice("Blue2swing", "3D Printer", dni, null, ["name": "Monoprice Mini 3D Printer", label: "Monoprice Mini 3D Printer", completedSetup: true])
-//        log.debug "Added zone device: ${dni}"
-//      }
-//}
-
-
-
-////////////////////////////////////////////////
 
 def lanResponseHandler(evt) {
   def map = stringToMap(evt.stringValue)
@@ -136,30 +128,29 @@ def lanResponseHandler(evt) {
 
   def headers = getHttpHeaders(map.headers);
   def body = getHttpBody(map.body);
-  log.trace "SmartThings Node Proxy: ${evt.stringValue}"
-  log.trace "Headers: ${headers}"
-  log.trace "Body: ${body}"
+  //log.trace "SmartThings Node Proxy: ${evt.stringValue}"
+  //log.trace "Headers: ${headers}"
+  //log.trace "Body: ${body}"
 
   //verify that this message is for this plugin
   if (headers.'stnp-plugin' != settings.pluginType) {
     return
   }
 
-  log.trace "MP Select Mini event: ${evt.stringValue}"
+  //log.trace "Honeywell Security event: ${evt.stringValue}"
   processEvent(body)
 }
 
 private sendCommandPlugin(path) {
   sendCommand("/plugins/"+settings.pluginType+path)
-  log.trace "/plugins/"+settings.pluginType+path
 }
 
 private sendCommand(path) {
-  log.trace "MP Select Mini send command: ${path}"
+  log.trace "MPSelect test send command: ${path}"
 
   if (settings.proxyAddress.length() == 0 ||
     settings.proxyPort.length() == 0) {
-   // log.error "SmartThings Node Proxy configuration not set!"
+    log.error "SmartThings Node Proxy configuration not set!"
     return
   }
 
@@ -178,37 +169,38 @@ private sendCommand(path) {
 }
 
 private processEvent(evt) {
-  if (evt.type == "discover") {                
+  if (evt.type == "discover") {
     addChildDevices(evt.partitions, evt.zones)
   }
   if (evt.type == "zone") {
     updateZoneDevices(evt.zone, evt.state)
   }
   if (evt.type == "partition") {
-    updatePartitions(evt.partition, evt.state, evt.alpha)
+    updatePartitions(evt.partition, evt.state, evt.alpha, evt.ExtruderTemp, evt.BedTemp, evt.TargetExtTemp, evt.TargetBedTemp, evt.status, evt.precent)
+   //updatePartitions(evt.partition, evt.state, evt.alpha) ////////////////////////////////////////////////////////
+    updateStatus(evt.ExtruderTemp, evt.BedTemp, evt.TargetExtTemp, evt.TargetBedTemp, evt.status, evt.precent)
     updateAlarmSystemStatus(evt.state)
   }
 }
 
+//////////////////////////////////////////////////////
 private addChildDevices(partitions, zones) {
   partitions.each {
-    //def deviceId = 'honeywell|partition'+it.partition
-    def deviceId = "MP Select Mini"   /////////
+   //def dni = "MPminiId"
+    def deviceId = 'MPSelectmini'+it.partition
     if (!getChildDevice(deviceId)) {
-      addChildDevice("Blue2swing", "MP Select Mini", deviceId, hostHub.id, ["name": "Monoprice Mini 3D Printer", label: "Monoprice Mini 3D Printer", completedSetup: true])
-///////////
-      ///addChildDevice("redloro-smartthings", "Honeywell programing", dni, hostHub.id, ["name": "Honeywell Programing", label: "Honeywell Programing", completedSetup: true])
-     ///log.debug "Added partition device: ${deviceId}"
-      log.debug "Added device: ${deviceId}"
+      addChildDevice("Blue2swing", "MP Select Mini", deviceId, hostHub.id, ["name": "MP Select mini", label: "MP Select mini", completedSetup: true])
+      log.debug "Added partition device: ${deviceId}"
+     // log.debug "Added partition device: ${dni}"
     }
   }
- 
+
   zones.each {
     def deviceId = 'honeywell|zone'+it.zone
     if (!getChildDevice(deviceId)) {
       it.type = it.type.capitalize()
       addChildDevice("redloro-smartthings", "Honeywell Zone "+it.type, deviceId, hostHub.id, ["name": it.name, label: it.name, completedSetup: true])
-     /// log.debug "Added zone device: ${deviceId}"
+      log.debug "Added zone device: ${deviceId}"
     }
   }
 }
@@ -222,22 +214,39 @@ def discoverChildDevices() {
 }
 
 private updateZoneDevices(zonenum,zonestatus) {
-  log.debug "updateZoneDevices: ${zonenum} is ${zonestatus}"
+  //log.debug "updateZoneDevices: ${zonenum} is ${zonestatus}"
   def zonedevice = getChildDevice("honeywell|zone${zonenum}")
   if (zonedevice) {
     zonedevice.zone("${zonestatus}")
   }
 }
 
-private updatePartitions(partitionnum, partitionstatus, panelalpha) {
-  log.debug "updatePartitions: ${partitionnum} is ${partitionstatus}"
-  def partitionDevice = getChildDevice("MP Select Mini")  /////
+
+private updatePartitions(partitionnum, partitionstatus, panelalpha, EXTtemp, BEDtemp, tgtEXTtemp, tgtBEDtemp, PntStatus, Percent) {
+  def partitionDevice = getChildDevice("MPSelectmini1")
   if (partitionDevice) {
-    partitionDevice.partition("${partitionstatus}", "${panelalpha}")
+    partitionDevice.partition("${partitionstatus}", "${panelalpha}", "${EXTtemp}", "${BEDtemp}", "${tgtEXTtemp}", "${tgtBEDtemp}", "${PntStatus}", "${Percent}")
+    partitionDevice.getSDCardHTML("${partitionstatus}")
+    //log.debug ${partitionstatus} ${panelalpha} ${EXTtemp} ${BEDtemp} ${tgtEXTtemp} ${tgtBEDtemp} ${PntStatus} ${Percent}
   }
-   partitionDevice = getChildDevice("honeywell|partition${partitionnum}")
+}
+
+//private updatePartitions(partitionnum, partitionstatus, panelalpha) {
+//    log.debug "updatePartitions: ${partitionnum} is ${partitionstatus}"
+//  def partitionDevice = getChildDevice("MPSelectmini1")
+//  if (partitionDevice) {
+//    partitionDevice.partition("${partitionstatus}", "${panelalpha}")
+//    log.debug ${panelalpha}
+//  }
+//}
+
+private updateStatus(EXTtemp, BEDtemp, tgtEXTtemp, tgtBEDtemp, PntStatus, Percent) {                    /////////////////////////added by me/////////////////////
+//  log.debug "updateStatus: ${EXTtemp}, ${BEDtemp}, ${tgtEXTtemp}, ${tgtBEDtemp}, ${PntStatus}, ${Percent}"
+  def partitionDevice = getChildDevice("MPSelectmini1")
+  //def partitionDevice = getChildDevice("MPSelectmini${partitionnum}")
   if (partitionDevice) {
-    partitionDevice.partition("${partitionstatus}", "${panelalpha}")
+    partitionDevice.status("${EXTtemp}", "${BEDtemp}", "${tgtEXTtemp}", "${tgtBEDtemp}", "${PntStatus}", "${Percent}")
+    //partitionDevice.getSDCardHTML("${EXTtemp}")
   }
 }
 
@@ -274,9 +283,9 @@ private updateAlarmSystemStatus(partitionstatus) {
   if (partitionstatus == "armedaway" || partitionstatus == "armedmax") {
     state.alarmSystemStatus = "away"
   }
-  if (partitionstatus == "ready") {
-    state.alarmSystemStatus = "off"
-  }
+ // if (partitionstatus == "ready") {
+ //   state.alarmSystemStatus = "off"
+ // }
 
   if (lastAlarmSystemStatus != state.alarmSystemStatus) {
     sendLocationEvent(name: "alarmSystemStatus", value: state.alarmSystemStatus)
