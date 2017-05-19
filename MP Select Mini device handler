@@ -13,11 +13,16 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+ import java.text.SimpleDateFormat
+ import groovy.time.*
+ 
 metadata {
 	definition (name: "MP Select Mini", namespace: "Blue2swing", author: "Isaias") {
 		capability "Alarm"
 		capability "Button"
-        
+        capability "Refresh"
+
+        command "refresh"
         command "partition"
         command "Send1"
         command "Send2"
@@ -34,24 +39,77 @@ metadata {
 
 	tiles (scale: 2) {
     multiAttributeTile(name:"partition", type: "generic", width: 6, height: 4) {
-      tileAttribute ("device.dscpartition", key: "PRIMARY_CONTROL") {
-        attributeState "ready", label: 'Ready', icon:"st.Home.home2"
-        attributeState "notready", label: 'Not Ready', backgroundColor: "#ffcc00", icon:"st.Home.home2"
-        attributeState "arming", label: 'Arming', backgroundColor: "#ffcc00", icon:"st.Home.home3"
-        attributeState "armedstay", label: 'Armed Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
-        attributeState "armedaway", label: 'Armed Away', backgroundColor: "#79b821", icon:"st.Home.home3"
-        attributeState "armedinstant", label: 'Armed Instant Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
-        attributeState "armedmax", label: 'Armed Instant Away', backgroundColor: "#79b821", icon:"st.Home.home3"
-        attributeState "alarmcleared", label: 'Alarm in Memory', backgroundColor: "#ffcc00", icon:"st.Home.home2"
-        attributeState "alarm", label: 'Alarm', backgroundColor: "#ff0000", icon:"st.Home.home3"
+      tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+          attributeState "", label: 'test', icon:"st.Entertainment.entertainment12"
+    //    attributeState "ready", label: 'Ready', icon:"st.Home.home2"
+    //    attributeState "notready", label: 'Not Ready', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "arming", label: 'Arming', backgroundColor: "#ffcc00", icon:"st.Home.home3"
+    //    attributeState "armedstay", label: 'Armed Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedaway", label: 'Armed Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedinstant", label: 'Armed Instant Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedmax", label: 'Armed Instant Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "alarmcleared", label: 'Alarm in Memory', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "alarm", label: 'Alarm', backgroundColor: "#ff0000", icon:"st.Home.home3"
       }
+  //    tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+  //      attributeState "panelStatus", label:'${currentValue}'
+  //    }
       tileAttribute ("panelStatus", key: "SECONDARY_CONTROL") {
         attributeState "panelStatus", label:'${currentValue}'
       }
     }
       
-     
-       standardTile("Keypad1","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+   ////////////////////////////////////
+      valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1) {
+			state("heatingSetpoint", label:'${currentValue}', unit: "Heat", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#FF3300"], [value: 15, color: "#FF3300"] ])
+			state("disabled" , label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1) {
+			state("coolingSetpoint", label: '${currentValue}', unit: "Cool", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#0099FF"], [value: 15, color: "#0099FF"] ])
+			state("disabled", label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label: '', action:"heatingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, range: "(0..210)", inactiveLabel: false) {
+			state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: "(0..60)", inactiveLabel: false) {
+			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
+			state "", label: ''
+		}
+
+	//	standardTile("blank1", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+    //			state "default", label: 'Extruder'
+	//	}
+        
+    //    standardTile("blank2", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+	//		state "default", label: 'Bed'
+	//	}
+		
+    /////////////////////////////
+    
+      standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+	  state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+	}
+
+      standardTile("Keypad1","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
       state "default", label: 'Home', action: "Send1", icon: "st.Home.home2", backgroundColor: "#79b821"
     }
       standardTile("Keypad2","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
@@ -68,27 +126,125 @@ metadata {
     }
       standardTile("Keypad6","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
       state "default", label: 'Custom', action: "Send6", icon: "st.Home.home2", backgroundColor: "#79b821"
-    }
+    } 
         
-    main "partition"
+   // main "partition"
 
-    details(["partition",
-             "Keypad1", "Keypad2", "Keypad3", 
-             "Keypad4", "Keypad5", "Keypad6"])
+   // details(["partition",
+   //          "Keypad1", "Keypad2", "Keypad3", 
+   //          "Keypad4", "Keypad5", "Keypad6"])
+             
+   ////////////////////////
+   htmlTile(name:"SDCardHTML", action: "getSDCardHTML", width: 6, height: 2, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+   //htmlTile(name:"graphHTML2", action: "getGraphHTML2", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+   String details1 = """ ["partition",
+   						  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+			           	"heatSliderControl", "coolSliderControl", 
+                        "SDCardHTML", 
+                        "refresh"] """
+        
+       // log.debug details1
+		main "partition"
+		details( ["SDCardHTML",
+                  "SDCardHTML",
+                  "partition",
+                  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+				  "heatSliderControl", "coolSliderControl", 
+				  "SDCardHTML", 
+			      "refresh"] )   
    }  
    
   preferences {
     input name: "xyz", type: "text", title: "X,Y,Z position", description: "Comma delimited list for X,Y,Z position", required: false
-    input name: "Custom", type: "text", title: "Custom Command", description: "Custom Command", required: false
+    input name: "Custom", type: "text", title: "Custom gcode", description: "Custom gcode", required: false
   }
 
 }
 
-def partition(String state, String alpha) {
-  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}")
-  sendEvent (name: "panelStatus", value: "${alpha}", displayed: false)
+mappings {
+	path("/getSDCardHTML") {action: [GET: "getSDCardHTML"]}
 }
 
+def partition(String state, String alpha, String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "heatingSetpoint", value: "${ExtTemp}/${TgtExtTemp}", displayed: true)
+  sendEvent (name: "coolingSetpoint", value: "${BedTemp}/${TgtBedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)  
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)         
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
+  
+  //def Stuff = ExtTemp.toString() //?: 'no string text!'
+  //getSDCardHTML(Stuff)
+}
+
+//def partition(String state, String alpha) {
+//  //log.debug "test values: ${alpha}, ${state}"
+//  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+//  //sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  //stuff = ${alpha}
+//}
+
+def status(String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  //log.debug "test values: ${status}, ${ExtTemp}"
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "ExtruderTemp", value: "${ExtTemp}", displayed: true)
+  sendEvent (name: "BedTemp", value: "${BedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
+}
+
+
+
+
+
+/************************************************************************************************
+|							Temperature Setpoint Functions for Buttons							|
+*************************************************************************************************/
+void heatingSetpointUp() {
+	//LogAction("heatingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat", "eco", "auto"] ) {
+		levelUpDown(1,"heat")
+	//}
+}
+
+void heatingSetpointDown() {
+	//LogAction("heatingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat","eco", "auto"] ) {
+		levelUpDown(-1, "heat")
+	//}
+}
+
+void coolingSetpointUp() {
+	//LogAction("coolingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool","eco", "auto"] ) {
+		levelUpDown(1, "cool")
+	//}
+}
+
+void coolingSetpointDown() {
+	//LogAction("coolingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool", "eco", "auto"] ) {
+		levelUpDown(-1, "cool")
+	//}
+}
+
+void levelUp() {
+	levelUpDown(1)
+}
+
+void levelDown() {
+	levelUpDown(-1)
+}
+
+/////////////////////////
 
 def Send1() {
   parent.sendCommandPlugin('/home');
@@ -106,5 +262,71 @@ def Send5() {
   parent.sendCommandPlugin('/');
 }
 def Send6() {
-  parent.sendCommandPlugin('/custom/'+settings.Custom);
+  //Custom2 = settings.Custom.trim().replace(/ /g, '%20');
+  parent.sendCommandPlugin('/custom/'+settings.Custom.trim().replaceAll("\\s","%20")); 
+}
+
+def getSDCardHTML(List) {
+      //List = "Test string"
+     log.debug List 
+     try {
+        String SDfiles = List != null ? List : "nope text"
+        log.debug SDfiles
+        def html = """
+        <!DOCTYPE html>
+		<html>
+			<head>
+                <meta http-equiv="refresh" content="1">
+				<meta http-equiv="cache-control" content="max-age=0"/>
+				<meta http-equiv="cache-control" content="no-cache"/>
+				<meta http-equiv="expires" content="0"/>
+				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+				<meta http-equiv="pragma" content="no-cache"/>
+				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">      
+                <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+                <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+                <script> // function myFunction {
+                         //SDfiles = List.toString()
+                         //}
+                  </script>
+                <script>               
+             //       \$(document).ready(function () {
+             //       // Hide the div
+             //       \$("#div1").hide();
+             //       // Show the div after 5s
+             //       \$("#div1").delay(5000).fadeIn(100);  
+             //       });    
+                    
+                    //function myFunction() {
+                    //    alert("Page is loaded");
+                    // }
+                     </script>
+			</head>
+			<body onload="myFunction()">
+				<table
+				  <col width="100%">
+				  <thead>
+					<th>SD Card Files</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td>${SDfiles}
+                      <div id="div1">${List}</div>
+                      <br><a href="http://www.google.com">http://www.google.com</a>
+				      </td> 
+					</tr>
+				  </tbody>
+				</table>
+			</body>
+		</html>
+       
+        """
+
+
+
+		render contentType: "text/html", data: html, status: 200
+	} catch (ex) {
+		log.error "SDCardHTML Exception:", ex
+		exceptionDataHandler(ex.message, "SDCardHTML")
+	}
 }
