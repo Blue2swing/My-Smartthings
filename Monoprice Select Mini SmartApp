@@ -1,7 +1,7 @@
 /**
- *  SmartThings SmartApp: Honeywell Security
+ *  Monoprice Select Mini 3D Printer
  *
- *  Author: redloro@gmail.com
+ *  Copyright 2017 Isaias Munguia
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -11,317 +11,296 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
+ *
  */
-import groovy.json.JsonSlurper
+ import java.text.SimpleDateFormat
+ import groovy.time.*
+ 
+metadata {
+	definition (name: "MP Select Mini", namespace: "Blue2swing", author: "Isaias") {
+		capability "Alarm"
+		capability "Button"
+        capability "Refresh"
 
-definition(
-  name: "MP Select Mini app",
-  namespace: "Blue2swing",
-  author: "Isaias",
-  description: "Monoprice Select Mini SmartApp",
-  category: "My Apps",
-  iconUrl: "http://www.icon100.com/up/3816/256/35-3d-printer-printing-a-vehicle.png",
-  iconX2Url: "http://www.icon100.com/up/3816/256/35-3d-printer-printing-a-vehicle.png",
-  iconX3Url: "http://www.icon100.com/up/3816/256/35-3d-printer-printing-a-vehicle.png",
-  singleInstance: true
-)
+        command "refresh"
+        command "partition"
+        command "Send1"
+        command "Send2"
+        command "Send3"
+        command "Send4"
+        command "Send5"
+        command "Send6"
+	}
 
-preferences {
-	page(name: "page1")
-}
 
-def page1() {
-  dynamicPage(name: "page1", install: true, uninstall: true) {
-    section("SmartThings Hub") {
-      input "hostHub", "hub", title: "Select Hub", multiple: false, required: true
-    }
-    section("SmartThings Node Proxy") {
-      input "proxyAddress", "text", title: "Proxy Address", description: "(ie. 192.168.1.10)", required: true
-      input "proxyPort", "text", title: "Proxy Port", description: "(ie. 8080)", required: true, defaultValue: "8080"
-      input "authCode", "password", title: "Auth Code", description: "", required: true, defaultValue: "secret-key"
-    }
-    section("3D Printer") {
-      input name: "pluginType", type: "enum", title: "Plugin Type", required: true, submitOnChange: true, options: ["MPSelectmini"]
-      input name: "portType", type: "enum", title: "ip/serial", required: true, submitOnChange: true, options: ["ip", "Serial"]
-      //input "securityCode", "password", title: "Security Code", description: "User code to arm/disarm the security panel", required: false
-      input "enableDiscovery", "bool", title: "Discover Zones (WARNING: all existing zones will be removed)", required: false, defaultValue: false
-    }
+	//simulator {
+		// TODO: define status and reply messages here
+	//}
 
-    if (pluginType == "MPSelectmini") {
-      section("MP Select Mini TPI") {
-        input "mpAddress", "text", title: "Host Address", description: "(ie. 192.168.1.11)", required: false
-        input "mpPort", "text", title: "Host Port", description: "(ie. 23)", required: false
-        //input "evlPassword", "password", title: "Password", description: "", required: false
+	tiles (scale: 2) {
+    multiAttributeTile(name:"partition", type: "generic", width: 6, height: 4) {
+      tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+          attributeState "", label: 'test', icon:"st.Entertainment.entertainment12"
+    //    attributeState "ready", label: 'Ready', icon:"st.Home.home2"
+    //    attributeState "notready", label: 'Not Ready', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "arming", label: 'Arming', backgroundColor: "#ffcc00", icon:"st.Home.home3"
+    //    attributeState "armedstay", label: 'Armed Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedaway", label: 'Armed Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedinstant", label: 'Armed Instant Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedmax", label: 'Armed Instant Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "alarmcleared", label: 'Alarm in Memory', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "alarm", label: 'Alarm', backgroundColor: "#ff0000", icon:"st.Home.home3"
+      }
+  //    tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+  //      attributeState "panelStatus", label:'${currentValue}'
+  //    }
+      tileAttribute ("panelStatus", key: "SECONDARY_CONTROL") {
+        attributeState "panelStatus", label:'${currentValue}'
       }
     }
+      
+   ////////////////////////////////////
+      valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1) {
+			state("heatingSetpoint", label:'${currentValue}', unit: "Heat", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#FF3300"], [value: 15, color: "#FF3300"] ])
+			state("disabled" , label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1) {
+			state("coolingSetpoint", label: '${currentValue}', unit: "Cool", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#0099FF"], [value: 15, color: "#0099FF"] ])
+			state("disabled", label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label: '', action:"heatingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, range: "(0..210)", inactiveLabel: false) {
+			state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: "(0..60)", inactiveLabel: false) {
+			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
+			state "", label: ''
+		}
 
-    if (portType == "Serial") {
-      section("MP Select Mini Serial") {
-        input "mpSerialport", "text", title: "Serial Port", description: "(ie. COM1)", required: false
-        input "mpBaudrate", "text", title: "Baudrate", description: "(ie. 115200)", required: false
-        //input "evlPassword", "password", title: "Password", description: "", required: false
-      }
+	//	standardTile("blank1", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+    //			state "default", label: 'Extruder'
+	//	}
+        
+    //    standardTile("blank2", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+	//		state "default", label: 'Bed'
+	//	}
+		
+    /////////////////////////////
+    
+      standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+	  state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+	}
+
+      standardTile("Keypad1","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Home', action: "Send1", icon: "st.Home.home2", backgroundColor: "#79b821"
     }
-
-  //  section("Smart Home Monitor") {
-  //    input "enableSHM", "bool", title: "Integrate with Smart Home Monitor", required: true, defaultValue: true
-  //  }
-  }
-}
-
-def installed() {
-  subscribeToEvents()
-}
-
-def subscribeToEvents() {
-  subscribe(location, null, lanResponseHandler, [filterEvents:false])
-  subscribe(location, "alarmSystemStatus", alarmHandler)
-}
-
-def uninstalled() {
-  removeChildDevices()
-}
-
-def updated() {
-  if (settings.enableDiscovery) {
-    //remove child devices as we will reload
-    removeChildDevices()
-  }
-
-  //subscribe to callback/notifications from STNP
-  sendCommand('/subscribe/'+getNotifyAddress())
-
-  //save envisalink settings to STNP config
-  if (settings.pluginType == "MPSelectmini" && settings.mpAddress && settings.mpPort) { //&& settings.evlPassword && settings.securityCode) {
-    sendCommandPlugin('/config/'+settings.mpAddress+":"+settings.mpPort+":TestPsswd:TestSecurCode") //+":"+settings.evlPassword+":"+settings.securityCode)
-  }
-
-  //save ad2usb settings to STNP config
-  if (settings.portType == "Serial" && settings.mpSerialport && settings.mpBaudrate) {
-    sendCommandPlugin('/config/'+settings.mpSerialport+":"+settings.mpBaudrate)
-  }
-
-  if (settings.enableDiscovery) {
-    //delay discovery for 5 seconds
-    runIn(5, discoverChildDevices)
-    settings.enableDiscovery = false
-  }
-}
-
-def lanResponseHandler(evt) {
-  def map = stringToMap(evt.stringValue)
-
-  //verify that this message is from STNP IP:Port
-  //IP and Port are only set on HTTP GET response and we need the MAC
-  if (map.ip == convertIPtoHex(settings.proxyAddress) &&
-    map.port == convertPortToHex(settings.proxyPort)) {
-      if (map.mac) {
-        state.proxyMac = map.mac
-      }
-  }
-
-  //verify that this message is from STNP MAC
-  //MAC is set on both HTTP GET response and NOTIFY
-  if (map.mac != state.proxyMac) {
-    return
-  }
-
-  def headers = getHttpHeaders(map.headers);
-  def body = getHttpBody(map.body);
-  //log.trace "SmartThings Node Proxy: ${evt.stringValue}"
-  //log.trace "Headers: ${headers}"
-  //log.trace "Body: ${body}"
-
-  //verify that this message is for this plugin
-  if (headers.'stnp-plugin' != settings.pluginType) {
-    return
-  }
-
-  //log.trace "Honeywell Security event: ${evt.stringValue}"
-  processEvent(body)
-}
-
-private sendCommandPlugin(path) {
-  sendCommand("/plugins/"+settings.pluginType+path)
-}
-
-private sendCommand(path) {
-  log.trace "MPSelect test send command: ${path}"
-
-  if (settings.proxyAddress.length() == 0 ||
-    settings.proxyPort.length() == 0) {
-    log.error "SmartThings Node Proxy configuration not set!"
-    return
-  }
-
-  def host = getProxyAddress()
-  def headers = [:]
-  headers.put("HOST", host)
-  headers.put("Content-Type", "application/json")
-  headers.put("stnp-auth", settings.authCode)
-
-  def hubAction = new physicalgraph.device.HubAction(
-      method: "GET",
-      path: path,
-      headers: headers
-  )
-  sendHubCommand(hubAction)
-}
-
-private processEvent(evt) {
-  if (evt.type == "discover") {
-    addChildDevices(evt.partitions, evt.zones)
-  }
-  if (evt.type == "zone") {
-    updateZoneDevices(evt.zone, evt.state)
-  }
-  if (evt.type == "partition") {
-    updatePartitions(evt.partition, evt.state, evt.alpha, evt.ExtruderTemp, evt.BedTemp, evt.TargetExtTemp, evt.TargetBedTemp, evt.status, evt.precent)
-   //updatePartitions(evt.partition, evt.state, evt.alpha) ////////////////////////////////////////////////////////
-    updateStatus(evt.ExtruderTemp, evt.BedTemp, evt.TargetExtTemp, evt.TargetBedTemp, evt.status, evt.precent)
-    updateAlarmSystemStatus(evt.state)
-  }
-}
-
-//////////////////////////////////////////////////////
-private addChildDevices(partitions, zones) {
-  partitions.each {
-   //def dni = "MPminiId"
-    def deviceId = 'MPSelectmini'+it.partition
-    if (!getChildDevice(deviceId)) {
-      addChildDevice("Blue2swing", "MP Select Mini", deviceId, hostHub.id, ["name": "MP Select mini", label: "MP Select mini", completedSetup: true])
-      log.debug "Added partition device: ${deviceId}"
-     // log.debug "Added partition device: ${dni}"
+      standardTile("Keypad2","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan On', action: "Send2", icon: "st.Home.home2", backgroundColor: "#79b821"
     }
-  }
-
-  zones.each {
-    def deviceId = 'honeywell|zone'+it.zone
-    if (!getChildDevice(deviceId)) {
-      it.type = it.type.capitalize()
-      addChildDevice("redloro-smartthings", "Honeywell Zone "+it.type, deviceId, hostHub.id, ["name": it.name, label: it.name, completedSetup: true])
-      log.debug "Added zone device: ${deviceId}"
+      standardTile("Keypad3","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan Off', action: "Send3", icon: "st.Home.home2", backgroundColor: "#79b821"
     }
+      standardTile("Keypad4","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Position', action: "Send4", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad5","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Test', action: "Send5", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad6","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Custom', action: "Send6", icon: "st.Home.home2", backgroundColor: "#79b821"
+    } 
+        
+   // main "partition"
+
+   // details(["partition",
+   //          "Keypad1", "Keypad2", "Keypad3", 
+   //          "Keypad4", "Keypad5", "Keypad6"])
+             
+   ////////////////////////
+   htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 2, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+   
+		main "partition"
+		details( ["partition",
+   				  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+			      "heatSliderControl", "coolSliderControl", 
+                  "graphHTML", 
+                  "refresh"] )   
+   }  
+   
+  preferences {
+    input name: "xyz", type: "text", title: "X,Y,Z position", description: "Comma delimited list for X,Y,Z position", required: false
+    input name: "Custom", type: "text", title: "Custom gcode", description: "Custom gcode", required: false
   }
 }
 
-private removeChildDevices() {
-  getAllChildDevices().each { deleteChildDevice(it.deviceNetworkId) }
+mappings {
+	path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
+}
+    
+
+def partition(String state, String alpha, String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "heatingSetpoint", value: "${ExtTemp}/${TgtExtTemp}", displayed: true)
+  sendEvent (name: "coolingSetpoint", value: "${BedTemp}/${TgtBedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)  
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)         
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
+  
+  //runIn(4, getGraphHTML, [data: [List: "TEST DATA"]]) 
 }
 
-def discoverChildDevices() {
-  sendCommandPlugin('/discover')
-}
 
-private updateZoneDevices(zonenum,zonestatus) {
-  //log.debug "updateZoneDevices: ${zonenum} is ${zonestatus}"
-  def zonedevice = getChildDevice("honeywell|zone${zonenum}")
-  if (zonedevice) {
-    zonedevice.zone("${zonestatus}")
-  }
-}
-
-
-private updatePartitions(partitionnum, partitionstatus, panelalpha, EXTtemp, BEDtemp, tgtEXTtemp, tgtBEDtemp, PntStatus, Percent) {
-  def partitionDevice = getChildDevice("MPSelectmini1")
-  if (partitionDevice) {
-    partitionDevice.partition("${partitionstatus}", "${panelalpha}", "${EXTtemp}", "${BEDtemp}", "${tgtEXTtemp}", "${tgtBEDtemp}", "${PntStatus}", "${Percent}")
-    partitionDevice.getSDCardHTML("${partitionstatus}")
-    //log.debug ${partitionstatus} ${panelalpha} ${EXTtemp} ${BEDtemp} ${tgtEXTtemp} ${tgtBEDtemp} ${PntStatus} ${Percent}
-  }
-}
-
-//private updatePartitions(partitionnum, partitionstatus, panelalpha) {
-//    log.debug "updatePartitions: ${partitionnum} is ${partitionstatus}"
-//  def partitionDevice = getChildDevice("MPSelectmini1")
-//  if (partitionDevice) {
-//    partitionDevice.partition("${partitionstatus}", "${panelalpha}")
-//    log.debug ${panelalpha}
-//  }
+//def partition(String state, String alpha) {
+//  //log.debug "test values: ${alpha}, ${state}"
+//  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+//  //sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  //stuff = ${alpha}
 //}
 
-private updateStatus(EXTtemp, BEDtemp, tgtEXTtemp, tgtBEDtemp, PntStatus, Percent) {                    /////////////////////////added by me/////////////////////
-//  log.debug "updateStatus: ${EXTtemp}, ${BEDtemp}, ${tgtEXTtemp}, ${tgtBEDtemp}, ${PntStatus}, ${Percent}"
-  def partitionDevice = getChildDevice("MPSelectmini1")
-  //def partitionDevice = getChildDevice("MPSelectmini${partitionnum}")
-  if (partitionDevice) {
-    partitionDevice.status("${EXTtemp}", "${BEDtemp}", "${tgtEXTtemp}", "${tgtBEDtemp}", "${PntStatus}", "${Percent}")
-    //partitionDevice.getSDCardHTML("${EXTtemp}")
-  }
+
+def status(String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "ExtruderTemp", value: "${ExtTemp}", displayed: true)
+  sendEvent (name: "BedTemp", value: "${BedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
 }
 
-def alarmHandler(evt) {
-  if (!settings.enableSHM) {
-    return
-  }
 
-  if (state.alarmSystemStatus == evt.value) {
-    return
-  }
-
-  state.alarmSystemStatus = evt.value
-  if (evt.value == "stay") {
-    sendCommandPlugin('/armStay')
-  }
-  if (evt.value == "away") {
-    sendCommandPlugin('/armAway')
-  }
-  if (evt.value == "off") {
-    sendCommandPlugin('/disarm')
-  }
+/************************************************************************************************
+|							Temperature Setpoint Functions for Buttons							|
+*************************************************************************************************/
+void heatingSetpointUp() {
+	//LogAction("heatingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat", "eco", "auto"] ) {
+		levelUpDown(1,"heat")
+	//}
 }
 
-private updateAlarmSystemStatus(partitionstatus) {
-  if (!settings.enableSHM || partitionstatus == "arming") {
-    return
-  }
-
-  def lastAlarmSystemStatus = state.alarmSystemStatus
-  if (partitionstatus == "armedstay" || partitionstatus == "armedinstant") {
-    state.alarmSystemStatus = "stay"
-  }
-  if (partitionstatus == "armedaway" || partitionstatus == "armedmax") {
-    state.alarmSystemStatus = "away"
-  }
- // if (partitionstatus == "ready") {
- //   state.alarmSystemStatus = "off"
- // }
-
-  if (lastAlarmSystemStatus != state.alarmSystemStatus) {
-    sendLocationEvent(name: "alarmSystemStatus", value: state.alarmSystemStatus)
-  }
+void heatingSetpointDown() {
+	//LogAction("heatingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat","eco", "auto"] ) {
+		levelUpDown(-1, "heat")
+	//}
 }
 
-private getHttpHeaders(headers) {
-  def obj = [:]
-  new String(headers.decodeBase64()).split("\r\n").each {param ->
-    def nameAndValue = param.split(":")
-    obj[nameAndValue[0]] = (nameAndValue.length == 1) ? "" : nameAndValue[1].trim()
-  }
-  return obj
+void coolingSetpointUp() {
+	//LogAction("coolingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool","eco", "auto"] ) {
+		levelUpDown(1, "cool")
+	//}
 }
 
-private getHttpBody(body) {
-  def obj = null;
-  if (body) {
-    def slurper = new JsonSlurper()
-    obj = slurper.parseText(new String(body.decodeBase64()))
-  }
-  return obj
+void coolingSetpointDown() {
+	//LogAction("coolingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool", "eco", "auto"] ) {
+		levelUpDown(-1, "cool")
+	//}
 }
 
-private getProxyAddress() {
-  return settings.proxyAddress + ":" + settings.proxyPort
+void levelUp() {
+	levelUpDown(1)
 }
 
-private getNotifyAddress() {
-  return settings.hostHub.localIP + ":" + settings.hostHub.localSrvPortTCP
+void levelDown() {
+	levelUpDown(-1)
 }
 
-private String convertIPtoHex(ipAddress) {
-  return ipAddress.tokenize( '.' ).collect {  String.format( '%02x', it.toInteger() ) }.join().toUpperCase()
+/////////////////////////
+
+def Send1() {
+  parent.sendCommandPlugin('/home');
+}
+def Send2() {
+  parent.sendCommandPlugin('/fanOn');
+}
+def Send3() {
+  parent.sendCommandPlugin('/fanOff');
+}
+def Send4() {
+  parent.sendCommandPlugin('/position/'+settings.xyz);
+}
+def Send5() {
+  parent.sendCommandPlugin('/');
+}
+def Send6() {
+  //Custom2 = settings.Custom.trim().replace(/ /g, '%20');
+  parent.sendCommandPlugin('/custom/'+settings.Custom.trim().replaceAll("\\s","%20")); 
 }
 
-private String convertPortToHex(port) {
-  return port.toString().format( '%04x', port.toInteger() ).toUpperCase()
+
+def initialize(String evt) {
+     state.someEvent = [value: evt]
+     //log.debug "initialize: $state.someEvent"
+     //log.debug evt
+ }
+     
+     
+ def getGraphHTML() {
+      def isString = state.someEvent.value // instanceof String
+      def SDfiles = isString   //List != null ? List : "nope text"
+     log.debug "SDfiles: $SDfiles"
+     try {
+        def html = """
+        <!DOCTYPE html>
+		<html>
+			<head>
+                <meta http-equiv="refresh" content="60">
+				<meta http-equiv="cache-control" content="max-age=0"/>
+				<meta http-equiv="cache-control" content="no-cache"/>
+				<meta http-equiv="expires" content="0"/>
+				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+				<meta http-equiv="pragma" content="no-cache"/>
+				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">      
+			</head>
+			<body>
+				<table
+				  <col width="100%">
+				  <thead>
+					<th>SD Card Files</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td>${SDfiles}
+                      <br><a href="http://www.google.com">http://www.google.com</a>
+				      </td> 
+					</tr>
+				  </tbody>
+				</table>
+			</body>
+		</html>
+       
+        """
+		render contentType: "text/html", data: html, status: 200
+	} catch (ex) {
+		log.error "SDCardHTML Exception:", ex
+		exceptionDataHandler(ex.message, "SDCardHTML")
+	}
+    
 }
