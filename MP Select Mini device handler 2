@@ -1,0 +1,347 @@
+/**
+ *  Monoprice Select Mini 3D Printer
+ *
+ *  Copyright 2017 Isaias Munguia
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ */
+ import java.text.SimpleDateFormat
+ import groovy.time.*
+ 
+metadata {
+	definition (name: "MP Select Mini", namespace: "Blue2swing", author: "Isaias") {
+		capability "Alarm"
+		capability "Button"
+        capability "Refresh"
+        capability "Contact Sensor"
+
+        command "refresh"
+        command "partition"
+        command "Send1"
+        command "Send2"
+        command "Send3"
+        command "Send4"
+        command "Send5"
+        command "Send6"
+	}
+
+
+	//simulator {
+		// TODO: define status and reply messages here
+	//}
+
+	tiles (scale: 2) {
+    multiAttributeTile(name:"partition", type: "generic", width: 6, height: 4) {
+      tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+          attributeState "", label: 'test', icon:"st.Entertainment.entertainment12"
+    //    attributeState "ready", label: 'Ready', icon:"st.Home.home2"
+    //    attributeState "notready", label: 'Not Ready', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "arming", label: 'Arming', backgroundColor: "#ffcc00", icon:"st.Home.home3"
+    //    attributeState "armedstay", label: 'Armed Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedaway", label: 'Armed Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedinstant", label: 'Armed Instant Stay', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "armedmax", label: 'Armed Instant Away', backgroundColor: "#79b821", icon:"st.Home.home3"
+    //    attributeState "alarmcleared", label: 'Alarm in Memory', backgroundColor: "#ffcc00", icon:"st.Home.home2"
+    //    attributeState "alarm", label: 'Alarm', backgroundColor: "#ff0000", icon:"st.Home.home3"
+      }
+  //    tileAttribute ("panelStatus", key: "PRIMARY_CONTROL") {
+  //      attributeState "panelStatus", label:'${currentValue}'
+  //    }
+      tileAttribute ("panelStatus", key: "SECONDARY_CONTROL") {
+        attributeState "panelStatus", label:'${currentValue}'
+      }
+    }
+      
+   ////////////////////////////////////
+      valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1) {
+			state("heatingSetpoint", label:'${currentValue}', unit: "Heat", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#FF3300"], [value: 15, color: "#FF3300"] ])
+			state("disabled" , label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1) {
+			state("coolingSetpoint", label: '${currentValue}', unit: "Cool", foregroundColor: "#FFFFFF",
+				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#0099FF"], [value: 15, color: "#0099FF"] ])
+			state("disabled", label: '', foregroundColor: "#FFFFFF", backgroundColor: "#FFFFFF")
+		}
+		standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label: '', action:"heatingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, range: "(0..210)", inactiveLabel: false) {
+			state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+			state "", label: ''
+		}
+		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+			state "", label: ''
+		}
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: "(0..60)", inactiveLabel: false) {
+			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
+			state "", label: ''
+		}
+
+	//	standardTile("blank1", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+    //			state "default", label: 'Extruder'
+	//	}
+        
+    //    standardTile("blank2", "device.heatingSetpoint", width: 3, height: 1, canChangeIcon: false, decoration: "flat") {
+	//		state "default", label: 'Bed'
+	//	}
+		
+    /////////////////////////////
+    
+      standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+	  state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+	}
+
+      standardTile("Keypad1","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Home', action: "Send1", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad2","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan On', action: "Send2", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad3","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Fan Off', action: "Send3", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad4","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Position', action: "Send4", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad5","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Test', action: "Send5", icon: "st.Home.home2", backgroundColor: "#79b821"
+    }
+      standardTile("Keypad6","device.Button", width: 2, height: 2, canChangeIcon: true, decoration: "flat") {
+      state "default", label: 'Custom', action: "Send6", icon: "st.Home.home2", backgroundColor: "#79b821"
+    } 
+        
+   // main "partition"
+
+   // details(["partition",
+   //          "Keypad1", "Keypad2", "Keypad3", 
+   //          "Keypad4", "Keypad5", "Keypad6"])
+             
+   ////////////////////////
+   htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 2, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+   //htmlTile(name:"graphHTML2", action: "getGraphHTML2", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+
+		main "partition"
+		details( ["partition",
+   				  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+			      "heatSliderControl", "coolSliderControl", 
+                  "graphHTML", 
+                  "refresh"] )   
+   }  
+   
+  preferences {
+    input name: "xyz", type: "text", title: "X,Y,Z position", description: "Comma delimited list for X,Y,Z position", required: false
+    input name: "Custom", type: "text", title: "Custom gcode", description: "Custom gcode", required: false
+    section() {
+    input "thecontact", "capability.contactSensor"  //, required: false,  multiple: true
+  }
+ }
+}
+
+mappings {
+	path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
+}
+    
+
+def partition(String state, String alpha, String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "heatingSetpoint", value: "${ExtTemp}/${TgtExtTemp}", displayed: true)
+  sendEvent (name: "coolingSetpoint", value: "${BedTemp}/${TgtBedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)  
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)         
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
+  
+  //log.debug "test"
+ 
+  //if(thecontact.currentContact == "open") {
+  //def latestState = thecontact.currentState("contact")
+  //log.debug "${latestState.name}"
+   // log.debug "CONTACT OPEN"
+   // }
+
+  return "$ExtTemp"
+  
+  // doorWindow.each {
+      //  log.debug " status: ${doorWindow.currentState("contact")}"
+  //  }
+    
+  //String Stuff = ExtTemp.toString() //?: 'no string text!'
+
+  //log.debug "$ExtTemp"
+  //runIn(4, getGraphHTML, [data: [List: "TEST DATA"]])
+  //getSDCardHTML("Stuff")
+  
+}
+
+//def partition(String state, String alpha) {
+//  //log.debug "test values: ${alpha}, ${state}"
+//  sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  sendEvent (name: "dscpartition", value: "${state}", descriptionText: "${alpha}", displayed: false)
+//  //sendEvent (name: "panelStatus", value: "${alpha}", displayed: true)
+//  //stuff = ${alpha}
+//}
+
+def status(String ExtTemp, String BedTemp, String TgtExtTemp, String TgtBedTemp, String status, String precent) {
+  //log.debug "test values: ${status}, ${ExtTemp}"
+  sendEvent (name: "PrintStatus", value: "${status}", displayed: true)
+  sendEvent (name: "ExtruderTemp", value: "${ExtTemp}", displayed: true)
+  sendEvent (name: "BedTemp", value: "${BedTemp}", displayed: true)
+  sendEvent (name: "TargetExtruderTemp", value: "${TgtExtTemp}", displayed: true)
+  sendEvent (name: "TargetBedTemp", value: "${TgtBedTemp}", displayed: true)
+  sendEvent (name: "PrecentageComplete", value: "${percent}", displayed: true)
+}
+
+
+
+
+
+/************************************************************************************************
+|							Temperature Setpoint Functions for Buttons							|
+*************************************************************************************************/
+void heatingSetpointUp() {
+	//LogAction("heatingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat", "eco", "auto"] ) {
+		levelUpDown(1,"heat")
+	//}
+}
+
+void heatingSetpointDown() {
+	//LogAction("heatingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["heat","eco", "auto"] ) {
+		levelUpDown(-1, "heat")
+	//}
+}
+
+void coolingSetpointUp() {
+	//LogAction("coolingSetpointUp()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool","eco", "auto"] ) {
+		levelUpDown(1, "cool")
+	//}
+}
+
+void coolingSetpointDown() {
+	//LogAction("coolingSetpointDown()...", "trace")
+	//def operMode = getHvacMode()
+	//if ( operMode in ["cool", "eco", "auto"] ) {
+		levelUpDown(-1, "cool")
+	//}
+}
+
+void levelUp() {
+	levelUpDown(1)
+}
+
+void levelDown() {
+	levelUpDown(-1)
+}
+
+/////////////////////////
+
+def Send1() {
+  parent.sendCommandPlugin('/home');
+}
+def Send2() {
+  parent.sendCommandPlugin('/fanOn');
+}
+def Send3() {
+  parent.sendCommandPlugin('/fanOff');
+}
+def Send4() {
+  parent.sendCommandPlugin('/position/'+settings.xyz);
+}
+def Send5() {
+  parent.sendCommandPlugin('/');
+}
+def Send6() {
+  //Custom2 = settings.Custom.trim().replace(/ /g, '%20');
+  parent.sendCommandPlugin('/custom/'+settings.Custom.trim().replaceAll("\\s","%20")); 
+}
+
+def initialize(String evt) {
+     state.someEvent = [value: evt.value]
+    // state.string = List
+     log.debug "initialize: $state.someEvent"
+     log.debug evt
+ }
+     
+     
+ def getGraphHTML() {
+ 
+      //initialize(List)
+      def isString = state.someEvent.value // instanceof String
+      
+      //List = "Test string"
+      def SDfiles = isString   //List != null ? List : "nope text"
+     
+     //log.debug state
+     log.debug List 
+     log.debug "SDfiles: $SDfiles"
+     try {
+       // String SDfiles = List != null ? List : "nope text"
+       // log.debug SDfiles
+        def html = """
+        <!DOCTYPE html>
+			<html>
+			  <head>
+			    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  			  <script type="text/javascript">
+    			  google.charts.load('current', {'packages':['table']});
+    			  google.charts.setOnLoadCallback(drawTable);
+
+   			   function drawTable() {
+    			    var data = new google.visualization.DataTable();
+    			    data.addColumn('string', 'Name');
+   			        data.addColumn('number', 'Salary');
+    			    data.addColumn('boolean', 'Full Time Employee');
+    			    data.addRows([
+      			    ['$SDfiles',  {v: 10000, f: '\$10,000'}, true],
+     			    ['Jim',   {v:8000,   f: '\$8,000'},  false],
+    			    ['Alice', {v: 12500, f: '\$12,500'}, true],
+    			    ['Bob',   {v: 7000,  f: '\$7,000'},  true]
+     			   ]);
+
+    			    var table = new google.visualization.Table(document.getElementById('table_div'));
+
+    			    table.draw(data, {showRowNumber: true, width: '100%', height: '100%'});
+  			    }
+			    </script>
+			  </head>
+			  <body>
+ 			   <div id="table_div"></div>
+ 			 </body>
+			</html>
+       
+        """
+
+
+
+		render contentType: "text/html", data: html, status: 200
+	} catch (ex) {
+		log.error "SDCardHTML Exception:", ex
+		exceptionDataHandler(ex.message, "SDCardHTML")
+	}
+    
+}
